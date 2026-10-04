@@ -10,6 +10,7 @@ import java.util.UUID;
 public record LeadResponse(
         UUID id,
         UUID propiedadId,
+        UUID clienteId,
         Estado estado,
         UUID agenteId
 ) {
@@ -17,6 +18,7 @@ public record LeadResponse(
         return LeadResponse.builder()
                 .id(lead.getId())
                 .propiedadId(lead.getPropiedadId())
+                .clienteId(lead.getClientId())
                 .estado(lead.getEstado())
                 .agenteId(lead.getAgenteId())
                 .build();

@@ -11,4 +11,8 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
     long countByAgenteIdAndEstadoNotIn(UUID agenteId, List<Estado> estados);
     long countByAgenteId(UUID agenteId);
     long countByAgenteIdAndEstado(UUID agenteId, Estado estado);
+
+    List<Lead> findByAgenteId(UUID agenteId);
+    List<Lead> findByAgenteIdAndEstado(UUID agenteId, Estado estado);
+
 }

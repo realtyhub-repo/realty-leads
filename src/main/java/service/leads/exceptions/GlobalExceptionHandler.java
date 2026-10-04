@@ -39,6 +39,16 @@ public class GlobalExceptionHandler {
         return construirRespuesta(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(LeadNoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> handleLeadNoEncontradoException( LeadNoEncontradoException  ex){
+        return construirRespuesta(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(EstadoTerminalException.class)
+    public ResponseEntity<ErrorResponse> handleEstadoTerminalException(EstadoTerminalException ex){
+        return construirRespuesta(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     private ResponseEntity<ErrorResponse> construirRespuesta(HttpStatus status, String mensaje){
         ErrorResponse error = new ErrorResponse(mensaje, status.value(), LocalDateTime.now());
         return ResponseEntity.status(status).body(error);
