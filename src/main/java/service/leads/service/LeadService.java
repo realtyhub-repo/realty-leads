@@ -6,16 +6,11 @@ import org.springframework.stereotype.Service;
 import service.leads.dto.internal.EstadoComercial;
 import service.leads.dto.internal.RolUsuario;
 import service.leads.dto.request.CrearLeadRequest;
-import service.leads.dto.response.AgenteInternalResponse;
-import service.leads.dto.response.LeadResponse;
-import service.leads.dto.response.OficinaResponse;
-import service.leads.dto.response.PropiedadCoordenadasResponse;
+import service.leads.dto.response.*;
 import service.leads.entity.DistributionRules;
 import service.leads.entity.Estado;
 import service.leads.entity.Lead;
-import service.leads.exceptions.AccesoNoAutorizadoException;
-import service.leads.exceptions.PropiedadNoEncontradaException;
-import service.leads.exceptions.SinAgentesDisponiblesException;
+import service.leads.exceptions.*;
 import service.leads.repository.DistributionRulesRepository;
 import service.leads.repository.LeadRepository;
 import service.leads.util.GeoUtils;
@@ -57,14 +52,70 @@ public class LeadService {
                 .estado(Estado.CONTACTADO)
                 .build();
 
-        Lead guardado=  leadRepository.save(lead);
+        Lead guardado = leadRepository.save(lead);
         log.info("lead creado");
-        UUID agenteIdAsignado = asignarAgente(coordenadasResponse.latitud(),coordenadasResponse.longitud());
-        guardado.setAgenteId(agenteIdAsignado);
-        log.info("lead asignado");
-        leadRepository.save(guardado);
+
+        try {
+            UUID agenteIdAsignado = asignarAgente(coordenadasResponse.latitud(), coordenadasResponse.longitud());
+            guardado.setAgenteId(agenteIdAsignado);
+            leadRepository.save(guardado);
+            log.info("lead asignado");
+        } catch (SinAgentesDisponiblesException e) {
+            log.warn("Lead {} creado sin agente asignado: {}", guardado.getId(), e.getMessage());
+        }
 
         return LeadResponse.from(guardado);
+    }
+
+    public void cambiarEstado(UUID leadId,Estado nuevoEstado, RolUsuario rolSolicitante, UUID solicitanteId){
+        Lead leadPorId = buscarLeadPorId(leadId);
+
+        boolean esDueno = leadPorId.getAgenteId()!=null && leadPorId.getAgenteId().equals(solicitanteId);
+        boolean esAdmin = rolSolicitante==RolUsuario.ADMINISTRADOR_CENTRAL;
+
+        if(!esAdmin && !esDueno)
+            throw new AccesoNoAutorizadoException("Acceso no autorizado");
+
+        if(leadPorId.getEstado()==Estado.CERRADO || leadPorId.getEstado()==Estado.DESCARTADO)
+            throw new EstadoTerminalException("El lead ya fue "+leadPorId.getEstado());
+
+        leadPorId.setEstado(nuevoEstado);
+        leadRepository.save(leadPorId);
+
+        if(nuevoEstado==Estado.CERRADO)
+            log.info("lead.setEstado(nuevoEstado)");
+    }
+
+    public List<LeadResponse> listarMisLeads(UUID idAgente, Estado estadoFiltrado){
+
+        if(estadoFiltrado!=null)
+            return leadRepository.findByAgenteIdAndEstado(idAgente, estadoFiltrado).stream()
+                    .map(LeadResponse::from)
+                    .toList();
+
+        return leadRepository.findByAgenteId(idAgente).stream()
+                .map(LeadResponse::from)
+                .toList();
+
+    }
+
+    public LeadDetalleResponse obtenerDetalle(UUID leadId, RolUsuario rol, UUID solicitanteId) {
+        Lead lead = buscarLeadPorId(leadId);
+
+        boolean esDueno = lead.getAgenteId() != null && lead.getAgenteId().equals(solicitanteId);
+        boolean esAdmin = rol == RolUsuario.ADMINISTRADOR_CENTRAL;
+
+        if (!esDueno && !esAdmin)
+            throw new AccesoNoAutorizadoException("No tienes permiso sobre este lead");
+
+        UsuarioContactoInternalResponse contacto = usuarioClientService.buscarContacto(lead.getClientId());
+
+        return LeadDetalleResponse.from(lead, contacto);
+    }
+    private Lead buscarLeadPorId(UUID id){
+        return leadRepository.findById(id).orElseThrow(()->
+                    new LeadNoEncontradoException("Lead no encontrado")
+                );
     }
 
     private UUID asignarAgente(double latPropiedad, double lonPropiedad){
