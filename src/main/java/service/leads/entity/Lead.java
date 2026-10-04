@@ -22,8 +22,8 @@ public class Lead {
     @Column(nullable = false, name = "propiedad_id")
     private UUID propiedadId;
 
-    @Column(nullable = false, name = "clientee_id")
-    private UUID clientId;
+    @Column(nullable = false, name = "cliente_id")
+    private UUID clienteId;
 
     @Column(nullable = true, name = "agente_id")
     private UUID agenteId;

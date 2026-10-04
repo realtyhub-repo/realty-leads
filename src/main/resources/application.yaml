@@ -2,6 +2,13 @@ spring:
   application:
     name: leads
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+
   datasource:
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
@@ -9,7 +16,7 @@ spring:
 
   jpa:
       hibernate:
-        ddl-auto: update
+        ddl-auto: validate
 
       show-sql: true
       properties:

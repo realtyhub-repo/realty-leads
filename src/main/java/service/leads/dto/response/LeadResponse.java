@@ -18,7 +18,7 @@ public record LeadResponse(
         return LeadResponse.builder()
                 .id(lead.getId())
                 .propiedadId(lead.getPropiedadId())
-                .clienteId(lead.getClientId())
+                .clienteId(lead.getClienteId())
                 .estado(lead.getEstado())
                 .agenteId(lead.getAgenteId())
                 .build();
