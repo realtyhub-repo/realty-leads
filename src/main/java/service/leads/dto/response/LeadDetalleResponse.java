@@ -27,7 +27,7 @@ public record LeadDetalleResponse(
                 .id(lead.getId())
                 .propiedadId(lead.getPropiedadId())
                 .estado(lead.getEstado())
-                .clienteId(lead.getClientId())
+                .clienteId(lead.getClienteId())
                 .nombreCliente(contacto.nombre())
                 .telefonoCliente(contacto.telefono())
                 .emailCliente(contacto.email())

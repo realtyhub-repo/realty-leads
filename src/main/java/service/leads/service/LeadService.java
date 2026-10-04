@@ -2,6 +2,9 @@ package service.leads.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import service.leads.dto.internal.EstadoComercial;
 import service.leads.dto.internal.RolUsuario;
@@ -10,6 +13,7 @@ import service.leads.dto.response.*;
 import service.leads.entity.DistributionRules;
 import service.leads.entity.Estado;
 import service.leads.entity.Lead;
+import service.leads.event.publisher.LeadEventPublisher;
 import service.leads.exceptions.*;
 import service.leads.repository.DistributionRulesRepository;
 import service.leads.repository.LeadRepository;
@@ -27,17 +31,27 @@ import java.util.stream.Collectors;
 public class LeadService {
 
     private static final int N_OFICINAS_CERCANAS = 5;
+    private static final String INDICE_LEAD_ACTIVO = "idx_un_lead_activo_por_cliente_propiedad";
 
     private final UsuarioClientService usuarioClientService;
     private final AgenteClientService agenteClientService;
     private final PropiedadClientService propiedadClientService;
     private final LeadRepository leadRepository;
     private final DistributionRulesRepository distributionRulesRepository;
+    private final LeadEventPublisher leadEventPublisher;
 
     public LeadResponse crear(UUID clienteId, RolUsuario rolSolicitante, CrearLeadRequest leadRequest){
 
         if(rolSolicitante!=RolUsuario.CLIENTE)
             throw new AccesoNoAutorizadoException("Acceso no autorizado");
+
+        List<Estado> estados = List.of(Estado.DESCARTADO, Estado.CERRADO);
+
+        boolean existeLead = leadRepository.existsByClienteIdAndPropiedadIdAndEstadoNotIn(clienteId,leadRequest.propiedadId(), estados);
+
+        if(existeLead){
+            throw new LeadDuplicadoException("Ya tienes un contacto activo para esta propiedad");
+        }
 
         PropiedadCoordenadasResponse coordenadasResponse = propiedadClientService.buscarCoordenadas(leadRequest.propiedadId());
 
@@ -47,21 +61,33 @@ public class LeadService {
 
         Lead lead = Lead.builder()
                 .propiedadId(leadRequest.propiedadId())
-                .clientId(clienteId)
+                .clienteId(clienteId)
                 .agenteId(null)
                 .estado(Estado.CONTACTADO)
                 .build();
 
-        Lead guardado = leadRepository.save(lead);
-        log.info("lead creado");
+        Lead guardado;
+        try {
+            guardado = leadRepository.save(lead);
+        } catch (DataIntegrityViolationException e) {
+            if (esDuplicadoDeLeadActivo(e))
+                throw new LeadDuplicadoException("Ya tienes un contacto activo para esta propiedad");
+            throw e;
+        }
 
         try {
             UUID agenteIdAsignado = asignarAgente(coordenadasResponse.latitud(), coordenadasResponse.longitud());
             guardado.setAgenteId(agenteIdAsignado);
-            leadRepository.save(guardado);
-            log.info("lead asignado");
+            guardado =  leadRepository.save(guardado);
         } catch (SinAgentesDisponiblesException e) {
             log.warn("Lead {} creado sin agente asignado: {}", guardado.getId(), e.getMessage());
+            return LeadResponse.from(guardado);
+
+        }
+        try {
+            leadEventPublisher.publicarLeadAsignado(guardado);
+        } catch (AmqpException e) {
+            log.error("Lead {} asignado pero no se pudo publicar el evento: {}", guardado.getId(), e.getMessage());
         }
 
         return LeadResponse.from(guardado);
@@ -108,7 +134,7 @@ public class LeadService {
         if (!esDueno && !esAdmin)
             throw new AccesoNoAutorizadoException("No tienes permiso sobre este lead");
 
-        UsuarioContactoInternalResponse contacto = usuarioClientService.buscarContacto(lead.getClientId());
+        UsuarioContactoInternalResponse contacto = usuarioClientService.buscarContacto(lead.getClienteId());
 
         return LeadDetalleResponse.from(lead, contacto);
     }
@@ -163,6 +189,12 @@ public class LeadService {
                 +reglas.getPesoCarga()*scoreCarga
                 +reglas.getPesoConversion()*scoreConversion;
 
+    }
+
+
+    private boolean esDuplicadoDeLeadActivo(DataIntegrityViolationException e) {
+        String mensaje = NestedExceptionUtils.getMostSpecificCause(e).getMessage();
+        return mensaje != null && mensaje.contains(INDICE_LEAD_ACTIVO);
     }
 
 
