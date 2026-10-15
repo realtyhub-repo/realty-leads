@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import service.leads.dto.request.AgendarVisitaRequest;
 import service.leads.dto.request.CambiarEstadoLeadRequest;
 import service.leads.dto.request.CrearLeadRequest;
 import service.leads.dto.response.LeadDetalleResponse;
@@ -31,6 +32,17 @@ public class LeadController {
             @Valid @RequestBody CrearLeadRequest request) {
 
         LeadResponse response = leadService.crear(contexto.userId(), contexto.rol(), request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+
+    @PostMapping("/{id}/visitas")
+    public ResponseEntity<LeadResponse> agendarVisita(
+            @PathVariable UUID id,
+            @Valid @RequestBody AgendarVisitaRequest request,
+            @UsuarioActual ContextoUsuario contexto) {
+
+        LeadResponse response = leadService.agendarVisita(id, contexto.userId(), contexto.rol(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

@@ -16,7 +16,6 @@ import java.util.UUID;
 public class Lead {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false, name = "propiedad_id")
