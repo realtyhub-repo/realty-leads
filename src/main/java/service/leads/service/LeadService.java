@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import service.leads.dto.internal.EstadoComercial;
 import service.leads.dto.internal.RolUsuario;
 import service.leads.dto.request.AgendarVisitaRequest;
@@ -14,6 +15,7 @@ import service.leads.dto.response.*;
 import service.leads.entity.DistributionRules;
 import service.leads.entity.Estado;
 import service.leads.entity.Lead;
+import service.leads.event.publisher.LeadEventPublisher;
 import service.leads.exceptions.*;
 import service.leads.repository.DistributionRulesRepository;
 import service.leads.repository.LeadRepository;
@@ -42,6 +44,7 @@ public class LeadService {
     private final VisitaClientService visitaClientService;
     private final LeadRepository leadRepository;
     private final DistributionRulesRepository distributionRulesRepository;
+    private final LeadEventPublisher leadEventPublisher;
 
     private record Candidatos(List<AgenteInternalResponse> agentes, Map<UUID, Double> distanciaPorOficina) {
     }
@@ -127,6 +130,7 @@ public class LeadService {
         return LeadResponse.from(lead, visita);
     }
 
+    @Transactional
     public void cambiarEstado(UUID leadId, Estado nuevoEstado, RolUsuario rolSolicitante, UUID solicitanteId) {
         Lead leadPorId = buscarLeadPorId(leadId);
 
@@ -139,8 +143,12 @@ public class LeadService {
         if (leadPorId.getEstado() == Estado.CERRADO || leadPorId.getEstado() == Estado.DESCARTADO)
             throw new EstadoTerminalException("El lead ya fue " + leadPorId.getEstado());
 
+        Estado estadoAnterior = leadPorId.getEstado();
         leadPorId.setEstado(nuevoEstado);
         leadRepository.save(leadPorId);
+
+        if (nuevoEstado == Estado.OFERTA_ACEPTADA && estadoAnterior != Estado.OFERTA_ACEPTADA)
+            leadEventPublisher.publicarOfertaAceptada(leadPorId);
 
         if (nuevoEstado == Estado.CERRADO)
             log.info("lead.setEstado(nuevoEstado)");

@@ -5,6 +5,7 @@ public enum Estado {
     VISITA_AGENDADA,
     OFERTA_PRESENTADA,
     NEGOCIACION,
+    OFERTA_ACEPTADA,
     CERRADO,
     DESCARTADO
 }

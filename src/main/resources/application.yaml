@@ -6,10 +6,10 @@ spring:
     name: leads
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 
   datasource:
@@ -27,3 +27,8 @@ spring:
           dialect: org.hibernate.dialect.PostgreSQLDialect
 server:
     port: 8084
+
+servicios:
+  usuarios-url: ${USUARIOS_URL:http://localhost:8082}
+  propiedades-url: ${PROPIEDADES_URL:http://localhost:8083}
+  visitas-url: ${VISITAS_URL:http://localhost:8085}
