@@ -1,5 +1,6 @@
 package service.leads.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
@@ -8,23 +9,23 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
     @Bean
-    public RestClient usuarioRestClient(){
+    public RestClient usuarioRestClient(@Value("${servicios.usuarios-url}") String usuariosUrl) {
         return RestClient.builder()
-                .baseUrl("http://localhost:8082")
+                .baseUrl(usuariosUrl)
                 .build();
     }
 
     @Bean
-    public RestClient propiedadRestClient(){
+    public RestClient propiedadRestClient(@Value("${servicios.propiedades-url}") String propiedadesUrl) {
         return RestClient.builder()
-                .baseUrl("http://localhost:8083")
+                .baseUrl(propiedadesUrl)
                 .build();
     }
 
     @Bean
-    public RestClient visitasRestClient(){
+    public RestClient visitasRestClient(@Value("${servicios.visitas-url}") String visitasUrl) {
         return RestClient.builder()
-                .baseUrl("http://localhost:8085")
+                .baseUrl(visitasUrl)
                 .build();
     }
 }
