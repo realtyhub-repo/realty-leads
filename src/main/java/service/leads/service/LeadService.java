@@ -150,6 +150,9 @@ public class LeadService {
         if (nuevoEstado == Estado.OFERTA_ACEPTADA && estadoAnterior != Estado.OFERTA_ACEPTADA)
             leadEventPublisher.publicarOfertaAceptada(leadPorId);
 
+        if (nuevoEstado == Estado.DESCARTADO)
+            leadEventPublisher.publicarDescartado(leadPorId);
+
         if (nuevoEstado == Estado.CERRADO)
             log.info("lead.setEstado(nuevoEstado)");
     }
