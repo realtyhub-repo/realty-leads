@@ -10,6 +10,7 @@ public class RabbitConfig {
 
     public static final String TOPIC_EXCHANGE_NAME = "realtyhub.events";
     public static final String RK_LEAD_OFERTA_ACEPTADA = "lead.oferta_aceptada";
+    public static final String RK_LEAD_DESCARTADO = "lead.descartado";
 
     @Bean
     public JacksonJsonMessageConverter jacksonJsonMessageConverter() {

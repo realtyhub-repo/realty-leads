@@ -5,6 +5,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import service.leads.config.RabbitConfig;
 import service.leads.entity.Lead;
+import service.leads.event.model.LeadDescartadoEvent;
 import service.leads.event.model.LeadOfertaAceptadaEvent;
 
 @Component
@@ -23,6 +24,19 @@ public class LeadEventPublisher {
         rabbitTemplate.convertAndSend(
                 RabbitConfig.TOPIC_EXCHANGE_NAME,
                 RabbitConfig.RK_LEAD_OFERTA_ACEPTADA,
+                evento);
+    }
+
+    public void publicarDescartado(Lead lead) {
+        LeadDescartadoEvent evento = new LeadDescartadoEvent(
+                lead.getId(),
+                lead.getPropiedadId(),
+                lead.getClienteId(),
+                lead.getAgenteId());
+
+        rabbitTemplate.convertAndSend(
+                RabbitConfig.TOPIC_EXCHANGE_NAME,
+                RabbitConfig.RK_LEAD_DESCARTADO,
                 evento);
     }
 }
