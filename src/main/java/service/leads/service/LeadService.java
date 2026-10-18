@@ -90,6 +90,8 @@ public class LeadService {
 
         Lead guardado = guardarCompensando(lead);
 
+        leadEventPublisher.publicarCreado(guardado, visita);
+
         return LeadResponse.from(guardado, visita);
     }
 
